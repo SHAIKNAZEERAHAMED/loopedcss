@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "env": {
+    "NEXT_PUBLIC_FIREBASE_API_KEY": "AIzaSyCMrrWYgru6WAbbx7SZLXLoEteDjw9RNic",
+    "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN": "loopcss-3dba5.firebaseapp.com",
+    "NEXT_PUBLIC_FIREBASE_PROJECT_ID": "loopcss-3dba5",
+    "NEXT_PUBLIC_FIREBASE_DATABASE_URL": "https://loopcss-3dba5-default-rtdb.firebaseio.com",
+    "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET": "loopcss-3dba5.firebasestorage.app",
+    "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "766494668366",
+    "NEXT_PUBLIC_FIREBASE_APP_ID": "1:766494668366:web:74ddc813b04c62a9b0b51f",
+    "NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID": "G-5H2KENMD8J",
+    "NEXT_PUBLIC_APP_URL": "https://loopcss.vercel.app",
+    "NEXT_PUBLIC_SOCKET_URL": "https://loopcss.vercel.app"
+  }
+} 

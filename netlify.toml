@@ -1,0 +1,34 @@
+[build]
+  command = "npm run build"
+  publish = "out"
+
+[build.environment]
+  NODE_VERSION = "18"
+  NEXT_PUBLIC_FIREBASE_API_KEY = "AIzaSyCMrrWYgru6WAbbx7SZLXLoEteDjw9RNic"
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN = "loopcss-3dba5.firebaseapp.com"
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID = "loopcss-3dba5"
+  NEXT_PUBLIC_FIREBASE_DATABASE_URL = "https://loopcss-3dba5-default-rtdb.firebaseio.com"
+  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET = "loopcss-3dba5.firebasestorage.app"
+  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID = "766494668366"
+  NEXT_PUBLIC_FIREBASE_APP_ID = "1:766494668366:web:74ddc813b04c62a9b0b51f"
+  NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID = "G-5H2KENMD8J"
+  NEXT_PUBLIC_APP_URL = "https://loopedcss.netlify.app"
+  NEXT_PUBLIC_SOCKET_URL = "https://loopedcss.netlify.app"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy = "default-src 'self' https: data: blob: 'unsafe-inline' 'unsafe-eval';" 
