@@ -150,9 +150,67 @@ export async function updateUser(uid: string, updates: Partial<User>): Promise<v
       updatedData.usernameLower = updates.username.toLowerCase()
     }
 
+    // If bio is being updated, ensure it's a string
+    if (updates.bio !== undefined) {
+      updatedData.bio = updates.bio || ""
+    }
+
+    // Update profile completion status if necessary fields are present
+    if (updates.displayName || updates.username || updates.bio || updates.photoURL) {
+      const currentUser = await getUser(uid)
+      if (currentUser) {
+        const hasRequiredFields = Boolean(
+          (updates.displayName || currentUser.displayName) &&
+          (updates.username || currentUser.username) &&
+          (updates.bio !== undefined ? updates.bio : currentUser.bio) &&
+          (updates.photoURL || currentUser.photoURL)
+        )
+        
+        updatedData.isProfileComplete = hasRequiredFields
+      }
+    }
+
+    // Use update instead of set to only modify specified fields
     await update(userRef, updatedData)
   } catch (error) {
     console.error("Error updating user:", error)
+    throw error
+  }
+}
+
+export async function updateUserProfile(
+  uid: string,
+  displayName: string,
+  bio: string,
+  username?: string,
+  location?: string,
+  website?: string
+): Promise<void> {
+  if (!db) throw new Error("Firebase Database not initialized")
+  const database = db as Database
+
+  try {
+    // First check if username is available if it's being updated
+    if (username) {
+      const isAvailable = await isUsernameAvailable(username)
+      if (!isAvailable) {
+        throw new Error("Username is already taken")
+      }
+    }
+
+    const updates: Partial<User> = {
+      displayName,
+      bio,
+      updatedAt: new Date().toISOString()
+    }
+
+    if (username) updates.username = username
+    if (location) updates.location = location
+    if (website) updates.website = website
+
+    await updateUser(uid, updates)
+  } catch (error) {
+    console.error("Error updating user profile:", error)
     throw error
   }
 }

@@ -1,58 +1,86 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { User } from 'firebase/auth'
-import { useFirebase } from './firebase-context'
+import { User, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth'
+import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase/config'
+import { useToast } from '@/components/ui/use-toast'
 
 interface AuthContextType {
   user: User | null
   loading: boolean
   error: Error | null
-  userProfile: any | null
-  logout: () => Promise<void>
+  signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   error: null,
-  userProfile: null,
-  logout: async () => {},
+  signOut: async () => {},
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { user, loading: firebaseLoading, error: firebaseError } = useFirebase()
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const [userProfile, setUserProfile] = useState<any | null>(null)
+  const router = useRouter()
+  const { toast } = useToast()
 
   useEffect(() => {
-    setLoading(firebaseLoading)
-    setError(firebaseError)
-  }, [firebaseLoading, firebaseError])
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      async (user) => {
+        setUser(user)
+        setLoading(false)
 
-  const logout = async () => {
-    try {
-      if (auth) {
-        await auth.signOut()
+        if (user) {
+          // Set auth token in cookie when user signs in
+          document.cookie = `auth-token=${await user.getIdToken()}; path=/`
+        } else {
+          // Remove auth token from cookie when user signs out
+          document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
+        }
+      },
+      (error) => {
+        console.error('Auth state change error:', error)
+        setError(error)
+        setLoading(false)
       }
-    } catch (error) {
-      console.error('Logout error:', error)
-      setError(error as Error)
+    )
+
+    return () => unsubscribe()
+  }, [])
+
+  const signOut = async () => {
+    try {
+      await firebaseSignOut(auth)
+      toast({
+        title: 'Signed out',
+        description: 'You have been signed out successfully.',
+      })
+      router.push('/login')
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to sign out.',
+        variant: 'destructive',
+      })
     }
   }
 
-  const value = {
-    user,
-    loading,
-    error,
-    userProfile,
-    logout,
-  }
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={{ user, loading, error, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
-export const useAuth = () => useContext(AuthContext)
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
+}
 

@@ -18,15 +18,21 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { createLoopPost, getLoopPosts, LoopPost } from "@/lib/loop-service"
 import { db } from "@/lib/firebase/config"
-import { ref, get, set } from "firebase/database"
+import { ref, get, set, remove } from "firebase/database"
+import { Post } from "@/components/posts/post"
+import { CreatePostForm } from "@/components/posts/create-post-form"
+import { AlgorithmExplainer } from "@/components/feed/algorithm-explainer"
+import { Loader2 } from "lucide-react"
+import { type Post as PostType, subscribeToFeed, getUserFollowingPosts, getTrendingPosts, createPost } from "@/lib/post-service"
+import { SafetyDashboard } from "@/components/safety/safety-dashboard"
 
 export function Feed() {
   const { user } = useAuth()
   const router = useRouter()
-  const [posts, setPosts] = useState<LoopPost[]>([])
-  const [newPost, setNewPost] = useState("")
+  const [posts, setPosts] = useState<PostType[]>([])
+  const [followingPosts, setFollowingPosts] = useState<PostType[]>([])
+  const [trendingPosts, setTrendingPosts] = useState<PostType[]>([])
   const [loading, setLoading] = useState(true)
   const [posting, setPosting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -34,6 +40,8 @@ export function Feed() {
   const [isPremium, setIsPremium] = useState(false)
   const [activeTab, setActiveTab] = useState("all")
   const [isBobOpen, setIsBobOpen] = useState(false)
+  const [newPost, setNewPost] = useState("")
+  const [showSafetyDashboard, setShowSafetyDashboard] = useState(false)
 
   useEffect(() => {
     const checkSubscription = async () => {
@@ -43,22 +51,50 @@ export function Feed() {
       }
     }
     checkSubscription()
-    loadPosts()
   }, [user])
 
-  const loadPosts = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const fetchedPosts = await getLoopPosts("general") // Default loop
-      setPosts(fetchedPosts)
-    } catch (err) {
-      setError("Failed to load posts. Please try again later.")
-      console.error("Error loading posts:", err)
-    } finally {
+  useEffect(() => {
+    if (!user) return
+
+    // Subscribe to all posts in real-time
+    const unsubscribeAll = subscribeToFeed((newPosts) => {
+      setPosts(newPosts)
       setLoading(false)
+    }, 20)
+
+    // Load following posts
+    const loadFollowingPosts = async () => {
+      try {
+        const following = await getUserFollowingPosts(user.uid)
+        setFollowingPosts(following)
+      } catch (err) {
+        console.error("Error loading following posts:", err)
+      }
     }
-  }
+
+    // Load trending posts
+    const loadTrendingPosts = async () => {
+      try {
+        const trending = await getTrendingPosts()
+        setTrendingPosts(trending)
+      } catch (err) {
+        console.error("Error loading trending posts:", err)
+      }
+    }
+
+    loadFollowingPosts()
+    loadTrendingPosts()
+
+    // Set up intervals to refresh following and trending posts
+    const followingInterval = setInterval(loadFollowingPosts, 60000) // Refresh every minute
+    const trendingInterval = setInterval(loadTrendingPosts, 300000) // Refresh every 5 minutes
+
+    return () => {
+      unsubscribeAll()
+      clearInterval(followingInterval)
+      clearInterval(trendingInterval)
+    }
+  }, [user])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -76,17 +112,15 @@ export function Feed() {
       }
 
       // Create post
-      await createLoopPost(
-        "general",
-        newPost,
+      await createPost(
         user.uid,
         user.displayName || "Anonymous",
-        user.photoURL || undefined
+        user.photoURL || undefined,
+        newPost
       )
 
-      // Clear form and reload posts
+      // Clear form
       setNewPost("")
-      await loadPosts()
     } catch (err) {
       setError("Failed to create post. Please try again.")
       console.error("Error creating post:", err)
@@ -106,8 +140,6 @@ export function Feed() {
       } else {
         await set(postRef, true)
       }
-      
-      await loadPosts()
     } catch (error) {
       console.error("Error liking post:", error)
       setError("Failed to like post. Please try again.")
@@ -125,8 +157,6 @@ export function Feed() {
       } else {
         await set(savedRef, true)
       }
-      
-      await loadPosts()
     } catch (error) {
       console.error("Error saving post:", error)
       setError("Failed to save post. Please try again.")
@@ -139,20 +169,8 @@ export function Feed() {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <Card key={i} className="border border-muted/30">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <div className="h-12 w-12 rounded-full bg-muted animate-pulse" />
-                <div className="space-y-2 flex-1">
-                  <div className="h-4 w-1/4 bg-muted animate-pulse rounded" />
-                  <div className="h-4 w-3/4 bg-muted animate-pulse rounded" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
@@ -163,15 +181,26 @@ export function Feed() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Share your thoughts</h2>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 hover:from-blue-500/20 hover:to-purple-500/20"
-              onClick={() => setIsBobOpen(true)}
-            >
-              <Icons.bot className="h-4 w-4 text-blue-500" />
-              Ask BOB
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+                onClick={() => setShowSafetyDashboard(prev => !prev)}
+              >
+                <Icons.shield className="h-4 w-4 text-blue-500" />
+                Safety
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 hover:from-blue-500/20 hover:to-purple-500/20"
+                onClick={() => setIsBobOpen(true)}
+              >
+                <Icons.bot className="h-4 w-4 text-blue-500" />
+                Ask BOB
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -221,9 +250,17 @@ export function Feed() {
         </CardContent>
       </Card>
 
+      {showSafetyDashboard && (
+        <SafetyDashboard />
+      )}
+
       <Card>
+        <CardHeader className="pb-3 flex justify-between items-center">
+          <h2 className="text-xl font-semibold">Your Feed</h2>
+          <AlgorithmExplainer />
+        </CardHeader>
         <CardContent className="p-4">
-          <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
+          <Tabs defaultValue="all" className="w-full">
             <TabsList className="w-full grid grid-cols-3 gap-4 bg-muted/50 p-1">
               <TabsTrigger value="all" className="rounded-md">For You</TabsTrigger>
               <TabsTrigger value="following" className="rounded-md">Following</TabsTrigger>
@@ -243,73 +280,13 @@ export function Feed() {
                     </div>
                   ) : (
                     posts.map((post) => (
-                      <Card key={post.id} className="border border-muted/30">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center space-x-4">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={post.authorPhotoURL} />
-                              <AvatarFallback>{post.authorName[0]}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 space-y-1">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <p className="text-sm font-medium leading-none">{post.authorName}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {new Date(post.createdAt).toLocaleDateString()}
-                                  </p>
-                                </div>
-                                {isPremium && (
-                                  <Badge variant="outline" className="bg-gradient-to-r from-blue-500/10 to-purple-500/10">
-                                    Premium
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="pb-3">
-                          <p className="text-base">{post.content}</p>
-                        </CardContent>
-                        <CardFooter className="pt-3 border-t">
-                          <div className="flex items-center justify-between w-full">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-muted-foreground hover:text-primary"
-                              onClick={() => handleLike(post.id)}
-                            >
-                              {post.likes?.[user?.uid] ? (
-                                <Icons.heartFilled className="h-5 w-5 text-red-500 mr-1" />
-                              ) : (
-                                <Icons.heart className="h-5 w-5 mr-1" />
-                              )}
-                              {Object.keys(post.likes || {}).length}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-muted-foreground hover:text-primary"
-                              onClick={() => handleComment(post.id)}
-                            >
-                              <Icons.message className="h-5 w-5 mr-1" />
-                              {Object.keys(post.comments || {}).length}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-muted-foreground hover:text-primary"
-                              onClick={() => handleSave(post.id)}
-                            >
-                              {post.saved?.[user?.uid] ? (
-                                <Icons.bookmarkFilled className="h-5 w-5 text-primary mr-1" />
-                              ) : (
-                                <Icons.bookmark className="h-5 w-5 mr-1" />
-                              )}
-                              Save
-                            </Button>
-                          </div>
-                        </CardFooter>
-                      </Card>
+                      <Post 
+                        key={post.id} 
+                        post={post} 
+                        onLike={() => handleLike(post.id)}
+                        onComment={() => handleComment(post.id)}
+                        onSave={() => handleSave(post.id)}
+                      />
                     ))
                   )}
                 </div>
@@ -317,11 +294,47 @@ export function Feed() {
             </TabsContent>
 
             <TabsContent value="following" className="mt-4">
-              {/* Similar structure for following posts */}
+              <ScrollArea className="h-[600px]">
+                <div className="space-y-4">
+                  {followingPosts.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Follow some users to see their posts here!</p>
+                    </div>
+                  ) : (
+                    followingPosts.map((post) => (
+                      <Post 
+                        key={post.id} 
+                        post={post}
+                        onLike={() => handleLike(post.id)}
+                        onComment={() => handleComment(post.id)}
+                        onSave={() => handleSave(post.id)}
+                      />
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
             </TabsContent>
 
             <TabsContent value="trending" className="mt-4">
-              {/* Similar structure for trending posts */}
+              <ScrollArea className="h-[600px]">
+                <div className="space-y-4">
+                  {trendingPosts.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>No trending posts yet.</p>
+                    </div>
+                  ) : (
+                    trendingPosts.map((post) => (
+                      <Post 
+                        key={post.id} 
+                        post={post}
+                        onLike={() => handleLike(post.id)}
+                        onComment={() => handleComment(post.id)}
+                        onSave={() => handleSave(post.id)}
+                      />
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
             </TabsContent>
           </Tabs>
         </CardContent>

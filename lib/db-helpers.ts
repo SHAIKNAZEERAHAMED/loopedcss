@@ -1,8 +1,19 @@
-import { ref, set, get, update, push, query, orderByChild, limitToLast } from "firebase/database"
+import { ref, set, get, update, push, query, orderByChild, limitToLast, DataSnapshot } from "firebase/database"
 import { db } from "./firebase/config"
+import { auth } from "./firebase/config"
+
+// Helper function to check authentication
+async function checkAuth() {
+  const user = auth.currentUser
+  if (!user) {
+    throw new Error("Authentication required")
+  }
+  return user
+}
 
 // Helper function to safely set data without undefined values
 export async function safeSet(path: string, data: any) {
+  await checkAuth()
   // Remove undefined values from objects recursively
   const cleanData = removeUndefined(data)
   const reference = ref(db, path)
@@ -11,6 +22,7 @@ export async function safeSet(path: string, data: any) {
 
 // Helper function to safely update data without undefined values
 export async function safeUpdate(path: string, data: any) {
+  await checkAuth()
   const cleanData = removeUndefined(data)
   const reference = ref(db, path)
   return update(reference, cleanData)
@@ -18,6 +30,7 @@ export async function safeUpdate(path: string, data: any) {
 
 // Helper function to safely push data without undefined values
 export async function safePush(path: string, data: any) {
+  await checkAuth()
   const cleanData = removeUndefined(data)
   const reference = ref(db, path)
   const newRef = push(reference)
@@ -27,6 +40,7 @@ export async function safePush(path: string, data: any) {
 
 // Helper function to create safe indices
 export async function createIndex(path: string, field: string) {
+  await checkAuth()
   try {
     // Don't use dots in index paths - use proper Firebase paths
     const indexPath = `indices/${path.replace(/\//g, "_")}_${field}`
@@ -73,14 +87,28 @@ function removeUndefined(obj: any): any {
 
 // Function to safely query data
 export async function safeQuery(path: string, orderBy: string, limit: number) {
-  const reference = ref(db, path)
-  const queryRef = query(reference, orderByChild(orderBy), limitToLast(limit))
-  return get(queryRef)
+  await checkAuth()
+  try {
+    const reference = ref(db, path)
+    const queryRef = query(reference, orderByChild(orderBy), limitToLast(limit))
+    const snapshot = await get(queryRef)
+    return snapshot.exists() ? snapshot.val() : null
+  } catch (error) {
+    console.error("Error querying data:", error)
+    return null
+  }
 }
 
 // Function to safely get data
 export async function safeGet(path: string) {
-  const reference = ref(db, path)
-  return get(reference)
+  await checkAuth()
+  try {
+    const reference = ref(db, path)
+    const snapshot = await get(reference)
+    return snapshot.exists() ? snapshot.val() : null
+  } catch (error) {
+    console.error("Error getting data:", error)
+    return null
+  }
 }
 

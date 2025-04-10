@@ -5,8 +5,10 @@ import { db } from "./firebase/config"
 
 export interface SentimentResult {
   score: number
-  label: "positive" | "negative" | "neutral"
+  label: "positive" | "neutral" | "negative"
   confidence: number
+  emoji: string
+  color: string
 }
 
 // Function to detect language
@@ -26,42 +28,47 @@ function detectLanguage(text: string): "english" | "telugu" | "other" {
  * Simple sentiment analysis utility that doesn't rely on external APIs
  */
 export async function analyzeSentiment(text: string): Promise<SentimentResult> {
-  try {
-    const openai = new OpenAI({
-      apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-    })
+  // Simple sentiment analysis based on keywords
+  const positiveWords = ["good", "great", "awesome", "excellent", "happy", "love", "wonderful", "fantastic"]
+  const negativeWords = ["bad", "terrible", "awful", "horrible", "sad", "hate", "poor", "disappointing"]
 
-    const response = await openai.completions.create({
-      model: "text-davinci-003",
-      prompt: `Analyze the sentiment of this text and return a score between -1 and 1, where -1 is very negative and 1 is very positive:\n\n"${text}"`,
-      max_tokens: 60,
-      temperature: 0.3,
-    })
+  const words = text.toLowerCase().split(/\s+/)
+  let positiveCount = 0
+  let negativeCount = 0
 
-    const score = parseFloat(response.choices[0].text?.trim() || "0")
-    
-    let label: SentimentResult["label"]
-    if (score > 0.2) label = "positive"
-    else if (score < -0.2) label = "negative"
-    else label = "neutral"
+  words.forEach(word => {
+    if (positiveWords.includes(word)) positiveCount++
+    if (negativeWords.includes(word)) negativeCount++
+  })
 
-    const result: SentimentResult = {
-      score,
-      label,
-      confidence: Math.abs(score)
-    }
+  const totalWords = words.length
+  const score = (positiveCount - negativeCount) / Math.max(totalWords, 1)
+  const confidence = Math.min((positiveCount + negativeCount) / Math.max(totalWords, 1), 1)
 
-    // Log the sentiment analysis result
-    await logSentimentAnalysis(text, result)
+  let label: "positive" | "neutral" | "negative"
+  let emoji: string
+  let color: string
 
-    return result
-  } catch (error) {
-    console.error("Error analyzing sentiment:", error)
-    return {
-      score: 0,
-      label: "neutral",
-      confidence: 0
-    }
+  if (score > 0.1) {
+    label = "positive"
+    emoji = "😊"
+    color = "#22c55e" // green-500
+  } else if (score < -0.1) {
+    label = "negative"
+    emoji = "😔"
+    color = "#ef4444" // red-500
+  } else {
+    label = "neutral"
+    emoji = "😐"
+    color = "#6b7280" // gray-500
+  }
+
+  return {
+    score,
+    label,
+    confidence,
+    emoji,
+    color
   }
 }
 

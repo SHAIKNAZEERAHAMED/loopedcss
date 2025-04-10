@@ -35,6 +35,20 @@ const nextConfig = {
   // Enable static optimization
   reactStrictMode: true,
   swcMinify: true,
+  // Configure dynamic routes for static export
+  trailingSlash: true,
+  exportPathMap: async function () {
+    return {
+      '/': { page: '/' },
+      '/login': { page: '/login' },
+      '/feed': { page: '/feed' },
+      '/profile/[userId]': { page: '/profile/[userId]' },
+      // Add a fallback profile page
+      '/profile': { page: '/profile/[userId]' },
+      // Add other static routes here
+      // Dynamic routes will be handled client-side
+    }
+  }
 }
 
 export default nextConfig

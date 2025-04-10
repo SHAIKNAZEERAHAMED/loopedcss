@@ -3,7 +3,8 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useAuth } from "@/contexts/auth-context"
+import { signInWithEmailAndPassword } from "firebase/auth"
+import { auth } from "@/lib/firebase/config"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,61 +15,35 @@ import { Label } from "@/components/ui/label"
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const { signIn, signInWithGoogle } = useAuth()
+  const [loading, setLoading] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !password) {
-      toast({
-        title: "Missing fields",
-        description: "Please fill in all fields.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsLoading(true)
+    setLoading(true)
 
     try {
-      await signIn(email, password)
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const user = userCredential.user
+      
+      // Set auth token in cookie
+      document.cookie = `auth-token=${await user.getIdToken()}; path=/`
+      
       toast({
-        title: "Welcome back!",
-        description: "Successfully logged in.",
+        title: "Success",
+        description: "You have been logged in successfully.",
       })
-      router.push("/")
+
+      router.push("/feed")
     } catch (error: any) {
-      console.error("Login error:", error)
       toast({
-        title: "Login failed",
-        description: error.message || "Please check your credentials and try again.",
+        title: "Error",
+        description: error.message || "Failed to login. Please try again.",
         variant: "destructive",
       })
     } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true)
-    try {
-      await signInWithGoogle()
-      toast({
-        title: "Welcome!",
-        description: "Successfully signed in with Google.",
-      })
-      router.push("/")
-    } catch (error: any) {
-      console.error("Google sign-in error:", error)
-      toast({
-        title: "Google sign-in failed",
-        description: error.message || "Please try again later.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
@@ -99,7 +74,7 @@ export default function LoginPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -108,8 +83,9 @@ export default function LoginPage() {
                     placeholder="name@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    disabled={loading}
                     required
-                    disabled={isLoading}
                     className="w-full"
                   />
                 </div>
@@ -121,16 +97,15 @@ export default function LoginPage() {
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                    disabled={loading}
                     required
-                    disabled={isLoading}
                     className="w-full"
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading && (
                     <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Icons.arrowRight className="mr-2 h-4 w-4" />
                   )}
                   Sign In
                 </Button>
@@ -152,20 +127,6 @@ export default function LoginPage() {
                   </span>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                type="button"
-                disabled={isLoading}
-                onClick={handleGoogleSignIn}
-                className="w-full"
-              >
-                {isLoading ? (
-                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Icons.google className="mr-2 h-4 w-4" />
-                )}
-                Google
-              </Button>
               <div className="text-center text-sm">
                 Don&apos;t have an account?{" "}
                 <Link href="/register" className="text-primary hover:underline">

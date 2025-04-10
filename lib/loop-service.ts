@@ -3,6 +3,7 @@ import { ref, set, get, update, push, query, orderByChild, equalTo, onValue, off
 import { moderateContent } from "@/lib/moderation-service"
 import { analyzeSentiment } from "@/lib/sentiment-analysis"
 import { User } from "@/lib/user-service"
+import { auth } from "./firebase/config"
 
 export interface Loop {
   id: string
@@ -427,6 +428,20 @@ export async function createLoopPost(
 // Get loop posts
 export async function getLoopPosts(loopId: string, limit = 20): Promise<LoopPost[]> {
   try {
+    // Check if user is authenticated
+    const currentUser = auth.currentUser
+    if (!currentUser) {
+      throw new Error("Authentication required to fetch posts")
+    }
+
+    // Check if user is a member of the loop
+    const memberRef = ref(db, `loop-members/${loopId}/${currentUser.uid}`)
+    const memberSnapshot = await get(memberRef)
+    
+    if (!memberSnapshot.exists()) {
+      throw new Error("You must be a member of this loop to view posts")
+    }
+
     const postsRef = ref(db, `loop-posts/${loopId}`)
     const postsQuery = query(postsRef, orderByChild("createdAt"))
     const snapshot = await get(postsQuery)
@@ -435,17 +450,17 @@ export async function getLoopPosts(loopId: string, limit = 20): Promise<LoopPost
 
     const posts: LoopPost[] = []
     snapshot.forEach((childSnapshot) => {
-      posts.push({
-        id: childSnapshot.key as string,
-        ...childSnapshot.val(),
-      } as LoopPost)
+      const post = {
+        id: childSnapshot.key,
+        ...childSnapshot.val()
+      } as LoopPost
+      posts.unshift(post) // Add to beginning to get reverse chronological order
     })
 
-    // Sort by createdAt in descending order (newest first)
-    return posts.sort((a, b) => b.createdAt - a.createdAt).slice(0, limit)
+    return posts.slice(0, limit)
   } catch (error) {
-    console.error("Error getting loop posts:", error)
-    return []
+    console.error("Error fetching loop posts:", error)
+    throw error
   }
 }
 

@@ -13,13 +13,17 @@ import { type Post as PostType, likePost, unlikePost, isLiked } from "@/lib/post
 import { SentimentIndicator } from "@/components/posts/sentiment-indicator"
 import { motion } from "framer-motion"
 import Image from "next/image"
+import { cn } from "@/lib/utils"
 
 interface PostProps {
   post: PostType
   showSavedBadge?: boolean
+  onLike?: () => Promise<void>
+  onComment?: () => Promise<void>
+  onSave?: () => Promise<void>
 }
 
-export function Post({ post, showSavedBadge }: PostProps) {
+export function Post({ post, showSavedBadge, onLike, onComment, onSave }: PostProps) {
   const [liked, setLiked] = useState(false)
   const [likesCount, setLikesCount] = useState(post.likesCount || 0)
   const [isLikeLoading, setIsLikeLoading] = useState(false)
@@ -48,22 +52,39 @@ export function Post({ post, showSavedBadge }: PostProps) {
   const handleLikeToggle = async () => {
     if (!user || isLikeLoading) return
 
-    setIsLikeLoading(true)
-
     try {
-      if (liked) {
-        await unlikePost(post.id, user.uid)
-        setLiked(false)
-        setLikesCount((prev) => Math.max(prev - 1, 0))
+      setIsLikeLoading(true)
+      if (onLike) {
+        await onLike()
       } else {
-        await likePost(post.id, user.uid)
-        setLiked(true)
-        setLikesCount((prev) => prev + 1)
+        if (liked) {
+          await unlikePost(post.id, user.uid)
+          setLiked(false)
+          setLikesCount((prev) => Math.max(prev - 1, 0))
+        } else {
+          await likePost(post.id, user.uid)
+          setLiked(true)
+          setLikesCount((prev) => prev + 1)
+        }
       }
     } catch (error) {
       console.error("Error toggling like:", error)
     } finally {
       setIsLikeLoading(false)
+    }
+  }
+
+  const handleCommentClick = () => {
+    if (onComment) {
+      onComment()
+    } else {
+      router.push(`/post/${post.id}`)
+    }
+  }
+
+  const handleSaveClick = async () => {
+    if (onSave) {
+      await onSave()
     }
   }
 
@@ -189,48 +210,27 @@ export function Post({ post, showSavedBadge }: PostProps) {
         )}
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        <div className="w-full">
-          <div className="flex justify-between items-center mb-2">
-            <div className="text-sm text-muted-foreground">
-              {likesCount > 0 && `${likesCount} ${likesCount === 1 ? "like" : "likes"}`}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {post.commentsCount > 0 && `${post.commentsCount} ${post.commentsCount === 1 ? "comment" : "comments"}`}
-            </div>
-          </div>
-          <Separator />
-          <div className="flex justify-between pt-2">
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`gap-2 ${liked ? "text-red-500" : ""}`}
-                onClick={handleLikeToggle}
-                disabled={isLikeLoading}
-              >
-                <Heart className={`h-5 w-5 ${liked ? "fill-red-500" : ""}`} />
-                Like
-              </Button>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <MessageCircle className="h-5 w-5" />
-                Comment
-              </Button>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <Share2 className="h-5 w-5" />
-                Share
-              </Button>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button variant="ghost" size="sm" className="gap-2">
-                <Bookmark className="h-5 w-5" />
-                Save
-              </Button>
-            </motion.div>
-          </div>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn("gap-2", liked && "text-red-500")}
+            onClick={handleLikeToggle}
+            disabled={isLikeLoading}
+          >
+            <Heart className={cn("h-5 w-5", liked && "fill-current")} />
+            <span>{likesCount}</span>
+          </Button>
+          <Button variant="ghost" size="sm" className="gap-2" onClick={handleCommentClick}>
+            <MessageCircle className="h-5 w-5" />
+            <span>{post.commentsCount || 0}</span>
+          </Button>
+          <Button variant="ghost" size="sm" className="gap-2" onClick={handleSaveClick}>
+            <Bookmark className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="sm" className="gap-2">
+            <Share2 className="h-5 w-5" />
+          </Button>
         </div>
       </CardFooter>
     </Card>

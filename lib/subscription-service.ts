@@ -1,4 +1,5 @@
 import { safeGet, safeSet, safeUpdate } from "./db-helpers"
+import { auth } from "./firebase/config"
 
 // Subscription tiers and pricing
 export const SUBSCRIPTION_TIERS = {
@@ -79,8 +80,23 @@ export interface UserSubscription {
 export async function getUserSubscription(userId: string): Promise<UserSubscription | null> {
   try {
     const subscription = await safeGet(`subscriptions/${userId}`)
+    
+    // If no subscription exists, return a default free subscription
+    if (!subscription) {
+      return {
+        userId,
+        tier: SUBSCRIPTION_TIERS.FREE,
+        status: "active",
+        startDate: Date.now(),
+        endDate: Date.now() + 1000 * 60 * 60 * 24 * 365, // 1 year from now
+      }
+    }
     return subscription
   } catch (error) {
+    if (error instanceof Error && error.message === "Authentication required") {
+      console.warn("User not authenticated when checking subscription")
+      return null
+    }
     console.error("Error getting user subscription:", error)
     return null
   }
@@ -92,8 +108,10 @@ export async function getUserSubscription(userId: string): Promise<UserSubscript
 export async function hasActiveSubscription(userId: string, tier?: SubscriptionTier): Promise<boolean> {
   try {
     const subscription = await getUserSubscription(userId)
-
-    if (!subscription) return false
+    if (!subscription) {
+      // If no subscription and authentication error, assume no active subscription
+      return false
+    }
 
     const isActive = subscription.status === "active" && subscription.endDate > Date.now()
 
@@ -115,6 +133,10 @@ export async function hasActiveSubscription(userId: string, tier?: SubscriptionT
 
     return false
   } catch (error) {
+    if (error instanceof Error && error.message === "Authentication required") {
+      console.warn("User not authenticated when checking subscription status")
+      return false
+    }
     console.error("Error checking active subscription:", error)
     return false
   }

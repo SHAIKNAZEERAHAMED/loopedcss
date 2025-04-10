@@ -45,6 +45,7 @@ import {
   History,
   Save,
   Zap,
+  Shield,
 } from "lucide-react"
 
 export type Icon = LucideIcon
@@ -167,4 +168,5 @@ export const Icons = {
   history: History,
   save: Save,
   zap: Zap,
+  shield: Shield,
 } 

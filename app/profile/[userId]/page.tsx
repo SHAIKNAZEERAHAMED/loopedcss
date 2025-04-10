@@ -23,7 +23,7 @@ import {
   MessageSquare,
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
-import { useAuth } from "@/components/auth/auth-provider"
+import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/components/ui/use-toast"
 import {
   getUser,
@@ -38,6 +38,12 @@ import { getUserPosts, type Post as PostType } from "@/lib/post-service"
 import { Post } from "@/components/posts/post"
 import { SafetyIndicator } from "@/components/safety/safety-indicator"
 import { calculateSafetyScore } from "@/lib/ai-moderation"
+
+// This is required for static export with dynamic routes
+export function generateStaticParams() {
+  // Return an empty array since we'll handle all profiles client-side
+  return []
+}
 
 export default function ProfilePage() {
   const { userId } = useParams() as { userId: string }
@@ -106,7 +112,7 @@ export default function ProfilePage() {
             description: "The requested profile could not be found.",
             variant: "destructive",
           })
-          router.push("/dashboard")
+          router.push("/feed")
         }
       } catch (error) {
         console.error("Error fetching profile data:", error)

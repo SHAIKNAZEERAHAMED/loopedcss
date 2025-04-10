@@ -1,6 +1,7 @@
 import { Metadata } from "next"
 import { ThemeProvider } from "@/components/theme-provider"
 import { FirebaseProvider } from "@/contexts/firebase-context"
+import { AuthProvider } from "@/contexts/auth-context"
 import AppShell from "@/components/layout/app-shell"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
@@ -17,20 +18,22 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <FirebaseProvider>
-            <AppShell>
-              {children}
-            </AppShell>
-            <Toaster />
-          </FirebaseProvider>
-        </ThemeProvider>
+      <body className="min-h-screen bg-background font-sans antialiased">
+        <FirebaseProvider>
+          <AuthProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <AppShell>
+                {children}
+              </AppShell>
+              <Toaster />
+            </ThemeProvider>
+          </AuthProvider>
+        </FirebaseProvider>
       </body>
     </html>
   )

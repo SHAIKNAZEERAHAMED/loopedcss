@@ -1,11 +1,13 @@
-import { ref, get, remove, query, orderByChild, limitToLast, onValue, off, update } from "firebase/database"
+import { ref, get, remove, query, orderByChild, limitToLast, onValue, off, update, push, startAt, DataSnapshot } from "firebase/database"
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage"
 import { db, storage } from "./firebase/config"
 import { v4 as uuidv4 } from "uuid"
-import { safeSet, safeUpdate, safePush, safeGet } from "./db-helpers"
+import { safeSet, safeUpdate, safePush, safeGet, safeQuery } from "./db-helpers"
 // Add these imports at the top of the file
 import type { AudioModerationResult } from "./audio-moderation-service"
 import type { User } from "@/lib/user-service"
+import { analyzeSentiment, type SentimentResult } from "./sentiment-analysis"
+import { moderateContent, type ModerationResult, logModerationEvent } from "./moderation-service"
 
 // Simple content moderation without OpenAI
 function localModerateContent(content: string): {
@@ -85,71 +87,55 @@ function localAnalyzeSentiment(content: string): {
 // Update the Post interface to include audio-related fields
 export interface Post {
   id: string
-  authorId: string
-  authorName: string
-  authorPhotoURL: string | null
   content: string
   contentLower?: string
-  mediaURLs?: string[]
-  mediaTypes?: string[]
-  hasAudio?: boolean
-  audioURL?: string
-  audioTranscript?: string
-  audioModerationResult?: {
-    isSafe: boolean
-    flaggedContent: {
-      abusiveLanguage: string[]
-      misinformation: string[]
-      unauthorizedApps: string[]
-    }
-    contextualScore: number
-    allowedRoasting: boolean
-  }
-  likes?: Record<string, boolean>
-  likesCount: number
-  commentsCount: number
+  authorId: string
+  authorName: string
+  authorPhotoURL?: string
   createdAt: string
   updatedAt: string
-  sentiment?: {
-    score: number
-    label: "positive" | "neutral" | "negative"
-    confidence: number
-    emoji: string
-    color: string
-  }
-  isSafe: boolean
-  moderationStatus: "approved" | "pending" | "rejected"
-  moderationReason?: string
+  likesCount: number
+  commentsCount: number
+  mediaURLs?: string[]
+  mediaTypes?: string[]
+  audioURL?: string
+  audioTranscript?: string
+  audioModerationResult?: AudioModerationResult
+  hasAudio?: boolean
+  sentiment?: SentimentResult
+  isSafe?: boolean
   safetyCategory?: string
   safetyConfidence?: number
-  comments: number
-  author: {
-    id: string
-    name: string
-    username: string
-    avatarUrl?: string
-  }
-  isLiked?: boolean
-  isSaved?: boolean
+  safetyScore?: number
+  moderationStatus?: "approved" | "pending" | "rejected"
+  moderationReason?: string
+  likes?: { [key: string]: boolean }
+  comments?: { [key: string]: boolean }
+  saved?: { [key: string]: boolean }
 }
 
 // Update the createPost function to handle audio content
 export async function createPost(
   authorId: string,
   authorName: string,
-  authorPhotoURL: string | null | undefined,
+  authorPhotoURL: string | undefined,
   content: string,
   mediaFiles?: File[],
-  audioModeration?: AudioModerationResult | null,
+  audioModeration?: AudioModerationResult,
 ): Promise<Post> {
   try {
-    // Use local sentiment analysis and content moderation
-    const sentiment = localAnalyzeSentiment(content)
-    const moderationResult = localModerateContent(content)
+    // Use sentiment analysis and content moderation
+    const sentiment = await analyzeSentiment(content)
+    const moderationResult = await moderateContent(content)
+
+    // Strictly enforce content moderation
+    if (!moderationResult.isSafe) {
+      throw new Error(moderationResult.warning || "Content violates community guidelines")
+    }
 
     // Generate a new post ID
     const postsRef = ref(db, "posts")
-    const newPostRef = await safePush("posts", {}) // Create empty entry first to get ID
+    const newPostRef = push(postsRef)
     if (!newPostRef.key) throw new Error('Failed to create post reference')
     const postId = newPostRef.key
 
@@ -181,77 +167,42 @@ export async function createPost(
 
     const timestamp = new Date().toISOString()
 
-    // Create post object - ensure authorPhotoURL is null, not undefined
+    // Create post object with moderation info
     const newPost: Post = {
       id: postId,
       authorId,
       authorName,
-      authorPhotoURL: authorPhotoURL ?? null, // Convert undefined to null
+      authorPhotoURL,
       content,
-      contentLower: content.toLowerCase(),
+      contentLower: content.toLowerCase(), // Add lowercase version for search
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      likesCount: 0,
+      commentsCount: 0,
       mediaURLs: mediaURLs.length > 0 ? mediaURLs : undefined,
       mediaTypes: mediaTypes.length > 0 ? mediaTypes : undefined,
       hasAudio: hasAudio || undefined,
       audioURL,
-      likesCount: 0,
-      commentsCount: 0,
-      createdAt: timestamp,
-      updatedAt: timestamp,
+      audioModerationResult: audioModeration,
       sentiment,
-      isSafe: moderationResult.isSafe && (!audioModeration || audioModeration.isSafe),
-      moderationStatus:
-        moderationResult.isSafe && (!audioModeration || audioModeration.isSafe) ? "approved" : "pending",
-      safetyCategory: moderationResult.isSafe ? undefined : moderationResult.category,
-      safetyConfidence: moderationResult.isSafe ? undefined : moderationResult.confidence,
-      comments: 0,
-      author: {
-        id: authorId,
-        name: authorName,
-        username: "",
-        avatarUrl: authorPhotoURL,
-      },
+      isSafe: moderationResult.isSafe,
+      safetyCategory: moderationResult.categories?.[0],
+      safetyConfidence: moderationResult.confidence,
+      safetyScore: moderationResult.safetyScore,
+      moderationStatus: "approved",
+      likes: {},
+      comments: {},
+      saved: {},
     }
 
-    // Add audio moderation results if available
-    if (audioModeration && hasAudio) {
-      newPost.audioTranscript = audioModeration.transcript
-      newPost.audioModerationResult = {
-        isSafe: audioModeration.isSafe,
-        flaggedContent: audioModeration.flaggedContent,
-        contextualScore: audioModeration.contextualScore,
-        allowedRoasting: audioModeration.allowedRoasting,
-      }
-    }
-
-    // Save post to database using our safe method
+    // Save post to database
     await safeSet(`posts/${postId}`, newPost)
 
     // Add post to user's posts list
     await safeSet(`users/${authorId}/posts/${postId}`, true)
 
-    // Log moderation event if content is flagged
-    if (!moderationResult.isSafe || (audioModeration && !audioModeration.isSafe)) {
-      await safePush("moderation-logs", {
-        type: "post",
-        postId,
-        authorId,
-        content,
-        hasAudio,
-        audioTranscript: audioModeration?.transcript,
-        result: {
-          text: moderationResult,
-          audio: audioModeration
-            ? {
-                isSafe: audioModeration.isSafe,
-                flaggedContent: audioModeration.flaggedContent,
-              }
-            : null,
-        },
-        timestamp: Date.now(),
-        reviewed: false,
-        actionTaken: false,
-      })
-    }
+    // Log moderation event
+    await logModerationEvent(postId, authorId, content, moderationResult)
 
     return newPost
   } catch (error) {
@@ -283,10 +234,11 @@ export async function updatePost(postId: string, updates: Partial<Post>): Promis
 
     // Re-analyze sentiment and moderation if content changes
     const sentiment = localAnalyzeSentiment(updates.content)
-    const moderationResult = localModerateContent(updates.content)
+    const moderationResult = await moderateContent(updates.content)
 
     updates.sentiment = sentiment
     updates.isSafe = moderationResult.isSafe
+    updates.safetyCategory = moderationResult.categories?.[0]
     updates.moderationStatus = moderationResult.isSafe ? "approved" : "pending"
 
     // Log moderation event if content is flagged
@@ -435,19 +387,70 @@ export function subscribeToFeed(callback: (posts: Post[]) => void, limit = 10): 
 
   const onPostsChange = onValue(
     postsRef,
-    (snapshot) => {
+    async (snapshot: DataSnapshot) => {
       if (snapshot.exists()) {
         const posts: Post[] = []
 
-        snapshot.forEach((childSnapshot) => {
-          posts.push({ ...childSnapshot.val(), id: childSnapshot.key } as Post)
+        // Process each post with moderation check
+        const promises: Promise<Post | null>[] = []
+        
+        snapshot.forEach((childSnapshot: DataSnapshot) => {
+          const post = childSnapshot.val()
+          
+          promises.push((async () => {
+            // Convert timestamps from numbers to ISO strings if they're numbers
+            if (typeof post.createdAt === 'number') {
+              post.createdAt = new Date(post.createdAt).toISOString()
+            }
+            if (typeof post.updatedAt === 'number') {
+              post.updatedAt = new Date(post.updatedAt).toISOString()
+            }
+
+            // Re-check content moderation
+            const moderationResult = await moderateContent(post.content)
+            
+            // Only include safe content
+            if (moderationResult.isSafe) {
+              return { 
+                ...post, 
+                id: childSnapshot.key,
+                isSafe: true,
+                safetyScore: moderationResult.safetyScore,
+                safetyCategory: moderationResult.categories[0],
+                safetyConfidence: moderationResult.confidence
+              } as Post
+            } else {
+              // For unsafe content, update the post's moderation status in the database
+              await safeUpdate(`posts/${childSnapshot.key}`, {
+                isSafe: false,
+                safetyScore: moderationResult.safetyScore,
+                safetyCategory: moderationResult.categories[0],
+                safetyConfidence: moderationResult.confidence,
+                moderationStatus: "rejected",
+                moderationReason: moderationResult.warning
+              })
+
+              // Log moderation event
+              await logModerationEvent(
+                childSnapshot.key as string,
+                post.authorId,
+                post.content,
+                moderationResult
+              )
+              return null
+            }
+          })())
+          return true // Continue iteration
         })
 
+        // Wait for all moderation checks to complete
+        const moderatedPosts = (await Promise.all(promises)).filter(Boolean) as Post[]
+
         // Sort by createdAt in descending order (newest first)
-        posts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        moderatedPosts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
         // Limit the number of posts
-        callback(posts.slice(0, limit))
+        callback(moderatedPosts.slice(0, limit))
       } else {
         callback([])
       }
@@ -539,7 +542,7 @@ export async function searchPosts(query: string, limit = 10): Promise<Post[]> {
       post.id = childSnapshot.key as string
 
       // Check if post content contains the query
-      if (post.contentLower && post.contentLower.includes(lowerQuery)) {
+      if (post.content.toLowerCase().includes(lowerQuery)) {
         posts.push(post)
       }
     })
@@ -575,5 +578,81 @@ export async function isPostSaved(postId: string, userId: string): Promise<boole
   const savedRef = ref(db, `savedPosts/${userId}/${postId}`)
   const snapshot = await get(savedRef)
   return snapshot.exists()
+}
+
+export async function getUserFollowingPosts(userId: string): Promise<Post[]> {
+  try {
+    // Get user's following list using safe database helper
+    const following = await safeGet(`following/${userId}`)
+    
+    if (!following) {
+      return []
+    }
+
+    const followingIds = Object.keys(following)
+    
+    // Get posts from each followed user
+    const postsPromises = followingIds.map(async followedId => {
+      const userPosts = await safeGet(`posts/${followedId}`)
+      if (!userPosts) return []
+      
+      return Object.entries(userPosts).map(([id, post]) => ({
+        ...(post as Post),
+        id
+      }))
+    })
+    
+    const postsArrays = await Promise.all(postsPromises)
+    
+    // Flatten the arrays and sort by date
+    const allPosts = postsArrays.flat()
+    return allPosts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  } catch (error) {
+    if (error instanceof Error && error.message === "Authentication required") {
+      console.warn("User not authenticated when fetching following posts")
+      return []
+    }
+    console.error("Error getting following posts:", error)
+    return []
+  }
+}
+
+export async function getTrendingPosts(): Promise<Post[]> {
+  try {
+    // Use safe database helper for trending posts
+    const posts = await safeGet("posts")
+    
+    if (!posts) {
+      return []
+    }
+
+    const postsArray: Post[] = Object.entries(posts).map(([id, post]) => ({
+      ...(post as Post),
+      id
+    }))
+
+    // Sort by engagement (likes + comments) in the last 24 hours
+    const now = Date.now()
+    const twentyFourHours = 24 * 60 * 60 * 1000
+
+    return postsArray
+      .filter(post => {
+        const postDate = new Date(post.createdAt).getTime()
+        return now - postDate <= twentyFourHours
+      })
+      .sort((a, b) => {
+        const aEngagement = (a.likesCount || 0) + (a.commentsCount || 0)
+        const bEngagement = (b.likesCount || 0) + (b.commentsCount || 0)
+        return bEngagement - aEngagement
+      })
+      .slice(0, 20) // Return top 20 trending posts
+  } catch (error) {
+    if (error instanceof Error && error.message === "Authentication required") {
+      console.warn("User not authenticated when fetching trending posts")
+      return []
+    }
+    console.error("Error getting trending posts:", error)
+    return []
+  }
 }
 
