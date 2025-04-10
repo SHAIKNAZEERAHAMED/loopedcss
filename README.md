@@ -1,11 +1,11 @@
-# Loop(CSS) - A social platform for sharing and discovering CSS designs
+# Loop(CSS) - A social platform for sharing and discovering
 
-Loop(CSS) is a social platform where users can share and discover beautiful CSS designs with the community.
+Loop(CSS) is a social platform where users can share and discover with the community.
 
 ## Features
 
 - User authentication with Firebase
-- Social feed of CSS designs
+- Social feed.
 - Search functionality
 - Notifications
 - User profiles
