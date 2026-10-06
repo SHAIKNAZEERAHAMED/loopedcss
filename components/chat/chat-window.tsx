@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useEffect, useState, useRef } from "react"
 import { collection, doc, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, getDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase/config"
+import { firestoreDb } from "@/lib/firebase/config"
 import { useAuth } from "@/components/auth/auth-provider"
 import { useSocket } from "@/components/socket/socket-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -165,7 +165,7 @@ export function ChatWindow({ chatId }: ChatWindowProps) {
     if (!user || !chatId) return
 
     // Get chat info
-    const chatDocRef = doc(db, "chats", chatId)
+    const chatDocRef = doc(firestoreDb, "chats", chatId)
     const unsubscribeChat = onSnapshot(chatDocRef, (doc) => {
       if (doc.exists()) {
         const chatData = doc.data()
@@ -179,7 +179,7 @@ export function ChatWindow({ chatId }: ChatWindowProps) {
     })
 
     // Get messages
-    const messagesQuery = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "asc"))
+    const messagesQuery = query(collection(firestoreDb, "chats", chatId, "messages"), orderBy("timestamp", "asc"))
 
     const unsubscribeMessages = onSnapshot(messagesQuery, (snapshot) => {
       const newMessages = snapshot.docs.map((doc) => ({
@@ -228,7 +228,7 @@ export function ChatWindow({ chatId }: ChatWindowProps) {
     // Get participants
     const fetchParticipants = async () => {
       try {
-        const chatDoc = await getDoc(doc(db, "chats", chatId))
+        const chatDoc = await getDoc(doc(firestoreDb, "chats", chatId))
         const chatData = chatDoc.data()
 
         if (chatData?.participants) {
@@ -236,7 +236,7 @@ export function ChatWindow({ chatId }: ChatWindowProps) {
           const participantsData: ChatParticipant[] = []
 
           for (const id of participantIds) {
-            const userDoc = await getDoc(doc(db, "users", id))
+            const userDoc = await getDoc(doc(firestoreDb, "users", id))
             const userData = userDoc.data()
 
             if (userData) {
@@ -319,7 +319,7 @@ export function ChatWindow({ chatId }: ChatWindowProps) {
       }
 
       // Add message to Firestore
-      const messageRef = await addDoc(collection(db, "chats", chatId, "messages"), messageData)
+      const messageRef = await addDoc(collection(firestoreDb, "chats", chatId, "messages"), messageData)
 
       // Get the message ID
       const messageWithId = {
@@ -333,7 +333,7 @@ export function ChatWindow({ chatId }: ChatWindowProps) {
       sendMessage(messageWithId)
 
       // Update last message in chat document
-      await updateDoc(doc(db, "chats", chatId), {
+      await updateDoc(doc(firestoreDb, "chats", chatId), {
         lastMessage: newMessage,
         lastMessageTime: serverTimestamp(),
         [`unreadCount.${user.uid}`]: 0,
