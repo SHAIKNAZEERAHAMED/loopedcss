@@ -75,8 +75,8 @@ export function CreatorProgramApplication() {
         const contentHistory = userPosts.map((post) => ({
           content: post.content,
           moderationResult: {
-            isSafe: post.isSafe,
-            category: post.safetyCategory,
+            isSafe: post.isSafe ?? true,
+            category: post.safetyCategory ?? undefined,
             confidence: post.safetyConfidence || 0.5,
           },
         }))
