@@ -1,42 +1,63 @@
+import { generateText as generateTextWithModel } from "ai"
 import { openai } from "@ai-sdk/openai"
 
 export interface GenerateTextOptions {
   model: string
-  system: string
+  system?: string
   prompt: string
   temperature?: number
   max_tokens?: number
+  maxTokens?: number
 }
 
 export interface GenerateTextResult {
   text: string
   usage?: {
-    prompt_tokens: number
-    completion_tokens: number
-    total_tokens: number
+    prompt_tokens?: number
+    completion_tokens?: number
+    total_tokens?: number
   }
 }
 
 export async function generateText(options: GenerateTextOptions): Promise<GenerateTextResult> {
-  try {
-    const { model, system, prompt, temperature = 0.7, max_tokens = 100 } = options
+  const {
+    model,
+    system,
+    prompt,
+    temperature = 0.7,
+    max_tokens,
+    maxTokens,
+  } = options
 
-    const response = await openai.createCompletion({
-      model,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: prompt }
-      ],
+  try {
+    const result = await generateTextWithModel({
+      model: openai(model),
+      system,
+      prompt,
       temperature,
-      max_tokens,
+      maxTokens: maxTokens ?? max_tokens ?? 100,
     })
 
+    const usage = result.usage as {
+      inputTokens?: number
+      outputTokens?: number
+      totalTokens?: number
+      promptTokens?: number
+      completionTokens?: number
+    } | undefined
+
     return {
-      text: response.choices[0]?.message?.content || "",
-      usage: response.usage,
+      text: result.text,
+      usage: usage
+        ? {
+            prompt_tokens: usage.inputTokens ?? usage.promptTokens,
+            completion_tokens: usage.outputTokens ?? usage.completionTokens,
+            total_tokens: usage.totalTokens,
+          }
+        : undefined,
     }
   } catch (error) {
     console.error("Error generating text:", error)
     throw error
   }
-} 
+}
