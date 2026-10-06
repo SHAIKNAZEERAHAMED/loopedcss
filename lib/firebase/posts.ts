@@ -1,8 +1,8 @@
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, increment } from "firebase/firestore"
-import { db } from "./config"
+import { firestoreDb } from "./config"
 
 export async function isLiked(postId: string, userId: string): Promise<boolean> {
-  const postRef = doc(db, "posts", postId)
+  const postRef = doc(firestoreDb, "posts", postId)
   const postDoc = await getDoc(postRef)
   
   if (!postDoc.exists()) {
@@ -14,7 +14,7 @@ export async function isLiked(postId: string, userId: string): Promise<boolean> 
 }
 
 export async function likePost(postId: string, userId: string): Promise<void> {
-  const postRef = doc(db, "posts", postId)
+  const postRef = doc(firestoreDb, "posts", postId)
   await updateDoc(postRef, {
     likes: arrayUnion(userId),
     likesCount: increment(1)
@@ -22,7 +22,7 @@ export async function likePost(postId: string, userId: string): Promise<void> {
 }
 
 export async function unlikePost(postId: string, userId: string): Promise<void> {
-  const postRef = doc(db, "posts", postId)
+  const postRef = doc(firestoreDb, "posts", postId)
   await updateDoc(postRef, {
     likes: arrayRemove(userId),
     likesCount: increment(-1)
