@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Check } from "lucide-react"
 import { updateProfile } from "firebase/auth"
 import { doc, updateDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase/config"
+import { firestoreDb } from "@/lib/firebase/config"
 
 export default function SettingsPage() {
   return (
@@ -46,7 +46,7 @@ function SettingsContent() {
         })
 
         // Update Firestore document
-        await updateDoc(doc(db, "users", user.uid), {
+        await updateDoc(doc(firestoreDb, "users", user.uid), {
           displayName: displayName,
           bio: bio,
         })
