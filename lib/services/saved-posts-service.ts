@@ -1,9 +1,9 @@
-import { db } from "@/lib/firebase/config"
+import { firestoreDb } from "@/lib/firebase/config"
 import { collection, doc, setDoc, deleteDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore"
 
 export async function savePost(userId: string, postId: string) {
   try {
-    const savedPostRef = doc(db, "savedPosts", `${userId}_${postId}`)
+    const savedPostRef = doc(firestoreDb, "savedPosts", `${userId}_${postId}`)
     await setDoc(savedPostRef, {
       userId,
       postId,
@@ -18,7 +18,7 @@ export async function savePost(userId: string, postId: string) {
 
 export async function unsavePost(userId: string, postId: string) {
   try {
-    const savedPostRef = doc(db, "savedPosts", `${userId}_${postId}`)
+    const savedPostRef = doc(firestoreDb, "savedPosts", `${userId}_${postId}`)
     await deleteDoc(savedPostRef)
     return true
   } catch (error) {
@@ -29,9 +29,9 @@ export async function unsavePost(userId: string, postId: string) {
 
 export async function isPostSaved(userId: string, postId: string) {
   try {
-    const savedPostRef = doc(db, "savedPosts", `${userId}_${postId}`)
+    const savedPostRef = doc(firestoreDb, "savedPosts", `${userId}_${postId}`)
     const savedPostDoc = await getDocs(
-      query(collection(db, "savedPosts"), where("userId", "==", userId), where("postId", "==", postId)),
+      query(collection(firestoreDb, "savedPosts"), where("userId", "==", userId), where("postId", "==", postId)),
     )
     return !savedPostDoc.empty
   } catch (error) {
@@ -42,7 +42,7 @@ export async function isPostSaved(userId: string, postId: string) {
 
 export async function getSavedPosts(userId: string) {
   try {
-    const savedPostsQuery = query(collection(db, "savedPosts"), where("userId", "==", userId))
+    const savedPostsQuery = query(collection(firestoreDb, "savedPosts"), where("userId", "==", userId))
 
     const savedPostsSnapshot = await getDocs(savedPostsQuery)
     return savedPostsSnapshot.docs.map((doc) => doc.data())
