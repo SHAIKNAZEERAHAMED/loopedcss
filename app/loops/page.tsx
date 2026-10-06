@@ -269,7 +269,7 @@ export default function LoopsPage() {
                 <p className="text-muted-foreground mb-6">Join some Loops to see them here</p>
                 <Button
                   className="connect-bg hover:bg-opacity-90"
-                  onClick={() => document.querySelector('[data-value="discover"]')?.click()}
+                  onClick={() => (document.querySelector('[data-value="discover"]') as HTMLElement | null)?.click()}
                 >
                   Discover Loops
                 </Button>
@@ -409,10 +409,9 @@ function LoopCard({ loop, isJoined, userRole, onJoin, onLeave, isLoading = false
       <CardFooter className="pt-0">
         <Button
           variant={isJoined ? "outline" : "default"}
-          className={isJoined ? "" : "connect-bg hover:bg-opacity-90"}
+          className={`w-full ${isJoined ? "" : "connect-bg hover:bg-opacity-90"}`}
           onClick={handleActionClick}
           disabled={isLoading || userRole === "admin"}
-          className="w-full"
         >
           {isLoading ? (
             <>
