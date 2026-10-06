@@ -132,7 +132,7 @@ export function PollCard({ pollId }: PollCardProps) {
         })
 
         // Update user vote
-        await update(userVoteRef, selectedOption)
+        await set(userVoteRef, selectedOption)
       } else {
         // User hasn't voted yet
         // Increment option vote count
