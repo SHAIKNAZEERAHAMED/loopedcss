@@ -141,7 +141,7 @@ export function PollCard({ pollId }: PollCardProps) {
         })
 
         // Record user vote
-        await update(userVoteRef, selectedOption)
+        await set(userVoteRef, selectedOption)
 
         // Increment total votes
         await update(ref(db, `polls/${pollId}`), {
