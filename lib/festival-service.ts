@@ -146,7 +146,7 @@ export async function getFestivalPosts(festivalId: string) {
 
     if (!snapshot.exists()) return []
 
-    const festivalPosts = []
+    const festivalPosts: Array<{ id: string | null; [key: string]: unknown }> = []
 
     snapshot.forEach((childSnapshot) => {
       const post = childSnapshot.val()
