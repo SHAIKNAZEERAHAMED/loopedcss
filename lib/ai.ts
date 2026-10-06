@@ -2,7 +2,7 @@ import { generateText as generateTextWithModel } from "ai"
 import { openai } from "@ai-sdk/openai"
 
 export interface GenerateTextOptions {
-  model: string
+  model: Parameters<typeof generateTextWithModel>[0]["model"]
   system?: string
   prompt: string
   temperature?: number
