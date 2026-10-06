@@ -90,7 +90,7 @@ export function CreateLoopPostForm({ loopId, onPostCreated }: CreateLoopPostForm
         // Also check for abusive content
         const moderationResult = await detectAbusiveContent(text)
 
-        if (moderationResult.isAbusive) {
+        if (!moderationResult.isSafe) {
           toast({
             title: "Content Warning",
             description: `Your post may contain inappropriate content (${moderationResult.categories.join(", ")}). Please review before posting.`,
