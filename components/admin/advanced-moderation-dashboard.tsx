@@ -18,7 +18,7 @@ import {
   FileAudio,
   Loader2,
 } from "lucide-react"
-import { ref, onValue, get, update, set } from "firebase/database"
+import { ref, onValue, get, update, remove } from "firebase/database"
 import { db } from "@/lib/firebase/config"
 import {
   type ModerationResult,
@@ -201,7 +201,7 @@ export function AdvancedModerationDashboard() {
       })
 
       // Remove from queue
-      await set(ref(db, `moderation-queue/${contentType}/${contentId}`), null)
+      await remove(ref(db, `moderation-queue/${contentType}/${contentId}`))
 
       // Update UI
       setRecentModeration((prev) =>
