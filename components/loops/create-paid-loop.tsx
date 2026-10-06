@@ -245,7 +245,7 @@ export function CreatePaidLoop() {
                 <div className="space-y-2">
                   <video src={videoPreview} controls className="max-h-[200px] mx-auto rounded-md" />
                   <p className="text-sm text-muted-foreground">
-                    {videoFile?.name} ({(videoFile?.size / 1024 / 1024).toFixed(2)} MB)
+                    {videoFile?.name} ({((videoFile?.size ?? 0) / 1024 / 1024).toFixed(2)} MB)
                   </p>
                 </div>
               ) : (
