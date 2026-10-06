@@ -39,6 +39,11 @@ export interface User {
   createdAt?: string
   updatedAt?: string
   isProfileComplete?: boolean
+  notificationSettings?: { email?: boolean; push?: boolean; mentions?: boolean; comments?: boolean; follows?: boolean }
+  privacySettings?: { profileVisibility?: string; showOnlineStatus?: boolean; allowTagging?: boolean; allowDirectMessages?: boolean }
+  followers?: number
+  following?: number
+  posts?: number
 }
 
 export async function createUser(user: FirebaseUser): Promise<void> {
