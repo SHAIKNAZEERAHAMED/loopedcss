@@ -204,19 +204,17 @@ export async function getUserSafetyMetrics(userId: string): Promise<SafetyMetric
   }
 }
 
-export async function shouldShowContent(content: string): Promise<boolean> {
-  const result = await moderateContent(content)
-  return result.isSafe
+export function shouldShowContent(content: string): boolean {
+  return moderateContent(content).isSafe
 }
 
-export async function getContentWarning(content: string): Promise<string | null> {
-  const result = await moderateContent(content)
+export function getContentWarning(content: string): string | null {
+  const result = moderateContent(content)
   return result.isSafe ? null : result.warning || "Content may be inappropriate"
 }
 
-export async function detectAbusiveContent(content: string): Promise<boolean> {
-  const result = await moderateContent(content)
-  return !result.isSafe
+export function detectAbusiveContent(content: string): ModerationResult {
+  return moderateContent(content)
 }
 
 
