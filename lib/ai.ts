@@ -2,7 +2,7 @@ import { generateText as generateTextWithModel } from "ai"
 import { openai } from "@ai-sdk/openai"
 
 export interface GenerateTextOptions {
-  model: Parameters<typeof generateTextWithModel>[0]["model"]
+  model: Parameters<typeof generateTextWithModel>[0]["model"] | string
   system?: string
   prompt: string
   temperature?: number
@@ -31,7 +31,7 @@ export async function generateText(options: GenerateTextOptions): Promise<Genera
 
   try {
     const result = await generateTextWithModel({
-      model: openai(model),
+      model: typeof model === "string" ? openai(model) : model,
       system,
       prompt,
       temperature,
