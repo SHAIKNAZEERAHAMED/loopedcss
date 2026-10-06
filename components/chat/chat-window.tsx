@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useEffect, useState, useRef } from "react"
-import { collection, doc, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc } from "firebase/firestore"
+import { collection, doc, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, getDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase/config"
 import { useAuth } from "@/components/auth/auth-provider"
 import { useSocket } from "@/components/socket/socket-provider"
@@ -228,7 +228,7 @@ export function ChatWindow({ chatId }: ChatWindowProps) {
     // Get participants
     const fetchParticipants = async () => {
       try {
-        const chatDoc = await doc(db, "chats", chatId).get()
+        const chatDoc = await getDoc(doc(db, "chats", chatId))
         const chatData = chatDoc.data()
 
         if (chatData?.participants) {
@@ -236,7 +236,7 @@ export function ChatWindow({ chatId }: ChatWindowProps) {
           const participantsData: ChatParticipant[] = []
 
           for (const id of participantIds) {
-            const userDoc = await doc(db, "users", id).get()
+            const userDoc = await getDoc(doc(db, "users", id))
             const userData = userDoc.data()
 
             if (userData) {
