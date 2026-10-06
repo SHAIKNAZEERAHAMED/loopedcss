@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore"
-import { db } from "@/lib/firebase/config"
+import { firestoreDb } from "@/lib/firebase/config"
 import { useAuth } from "@/components/auth/auth-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
@@ -34,7 +34,7 @@ export function ChatSidebar({ className = "", onSelectChat }: ChatSidebarProps) 
   useEffect(() => {
     if (!user) return
 
-    const chatsQuery = query(collection(db, "chats"), orderBy("lastMessageTime", "desc"))
+    const chatsQuery = query(collection(firestoreDb, "chats"), orderBy("lastMessageTime", "desc"))
 
     // Real-time listener for chats
     const unsubscribe = onSnapshot(chatsQuery, (snapshot) => {
