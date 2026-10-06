@@ -170,11 +170,10 @@ function analyzeEnglishSentiment(text: string): SentimentResult {
     label = "negative"
   }
 
-  return {
-    score,
-    label,
-    confidence,
-  }
+  const emoji = label === "positive" ? "😊" : label === "negative" ? "😔" : "😐"
+  const color = label === "positive" ? "#22c55e" : label === "negative" ? "#ef4444" : "#6b7280"
+
+  return { score, label, confidence, emoji, color }
 }
 
 function analyzeTeluguSentiment(text: string): SentimentResult {
@@ -218,11 +217,10 @@ function analyzeTeluguSentiment(text: string): SentimentResult {
     label = "negative"
   }
 
-  return {
-    score,
-    label,
-    confidence,
-  }
+  const emoji = label === "positive" ? "😊" : label === "negative" ? "😔" : "😐"
+  const color = label === "positive" ? "#22c55e" : label === "negative" ? "#ef4444" : "#6b7280"
+
+  return { score, label, confidence, emoji, color }
 }
 
 // Function to check for abusive content in both English and Telugu
