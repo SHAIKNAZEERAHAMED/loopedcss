@@ -1,8 +1,8 @@
-import { generateText as generateTextWithModel } from "ai"
+import { generateText as generateTextWithModel, type LanguageModelV1 } from "ai"
 import { openai } from "@ai-sdk/openai"
 
 export interface GenerateTextOptions {
-  model: Parameters<typeof generateTextWithModel>[0]["model"] | string
+  model: string | LanguageModelV1
   system?: string
   prompt: string
   temperature?: number
