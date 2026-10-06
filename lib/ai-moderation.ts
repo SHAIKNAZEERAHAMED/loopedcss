@@ -128,7 +128,7 @@ export async function calculateSafetyScore(contentHistory: ContentHistoryItem[])
   }
 }
 
-interface ModerationLog {
+export interface ModerationLog {
   id: string
   content: string
   timestamp: number
