@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { db } from "@/lib/firebase/config"
+import { firestoreDb } from "@/lib/firebase/config"
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore"
 import { LoopCard } from "@/components/loops/loop-card"
 
@@ -19,7 +19,7 @@ export function ProfileLoops({ username }: ProfileLoopsProps) {
         // In a real app, you would query by creator.username
         // This is a simplified version
         const loopsQuery = query(
-          collection(db, "loops"),
+          collection(firestoreDb, "loops"),
           where("creator.displayName", "==", username),
           orderBy("createdAt", "desc"),
           limit(12),
