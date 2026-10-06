@@ -1,4 +1,4 @@
-import { db } from "@/lib/firebase/config"
+import { firestoreDb } from "@/lib/firebase/config"
 import { collection, addDoc, serverTimestamp } from "firebase/firestore"
 
 export interface Notification {
@@ -20,7 +20,7 @@ export async function createNotification(notification: Omit<Notification, "read"
       createdAt: serverTimestamp(),
     }
 
-    const docRef = await addDoc(collection(db, "notifications"), notificationData)
+    const docRef = await addDoc(collection(firestoreDb, "notifications"), notificationData)
     return docRef.id
   } catch (error) {
     console.error("Error creating notification:", error)
