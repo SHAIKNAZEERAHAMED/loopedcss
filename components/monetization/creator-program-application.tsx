@@ -191,13 +191,7 @@ export function CreatorProgramApplication() {
         </CardHeader>
         <CardContent>
           <Alert
-            variant={
-              application.status === "approved"
-                ? "default"
-                : application.status === "rejected"
-                  ? "destructive"
-                  : "warning"
-            }
+            variant={application.status === "rejected" ? "destructive" : "default"}
           >
             <div className="flex items-start gap-2">
               {application.status === "approved" ? (
@@ -257,7 +251,7 @@ export function CreatorProgramApplication() {
                 <Progress
                   value={Math.min(
                     100,
-                    (application.metrics.followerCount / selectedProgram?.requirements.minFollowers || 1) * 100,
+                    (application.metrics.followerCount / selectedProgram?.requirements.minFollowers ?? 1) * 100,
                   )}
                   className="h-2"
                 />
@@ -274,7 +268,7 @@ export function CreatorProgramApplication() {
                 <Progress
                   value={Math.min(
                     100,
-                    (application.metrics.postCount / selectedProgram?.requirements.minPosts || 1) * 100,
+                    (application.metrics.postCount / selectedProgram?.requirements.minPosts ?? 1) * 100,
                   )}
                   className="h-2"
                 />
@@ -291,7 +285,7 @@ export function CreatorProgramApplication() {
                 <Progress
                   value={Math.min(
                     100,
-                    (application.metrics.engagementRate / selectedProgram?.requirements.minEngagementRate || 1) * 100,
+                    (application.metrics.engagementRate / selectedProgram?.requirements.minEngagementRate ?? 1) * 100,
                   )}
                   className="h-2"
                 />
