@@ -91,7 +91,7 @@ function normalizeText(text: string): string {
     .replace(/\s+/g, '')
 }
 
-export async function moderateContent(text: string): Promise<ModerationResult> {
+export function moderateContent(text: string): ModerationResult {
   const contentLower = text.toLowerCase()
   const normalizedContent = normalizeText(text)
   const detectedCategories: string[] = []
