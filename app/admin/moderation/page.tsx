@@ -16,23 +16,19 @@ import { useAuth } from "@/components/auth/auth-provider"
 import { useToast } from "@/components/ui/use-toast"
 import { getModerationLogs, updateModerationLog } from "@/lib/ai-moderation"
 import { formatDistanceToNow } from "date-fns"
+import type { ModerationLog as ServiceModerationLog } from "@/lib/ai-moderation"
 
 // Admin user IDs - replace with your actual admin user IDs
 const ADMIN_USER_IDS = ["your-admin-user-id-1", "your-admin-user-id-2"]
 
-interface ModerationLog {
+interface ModerationLog extends ServiceModerationLog {
   id: string
   content: string
-  result: {
-    isSafe: boolean
-    category: string
-    confidence: number
-    explanation: string
-  }
+  result: ServiceModerationLog["result"] & { explanation?: string }
   timestamp: number
-  reviewed: boolean
+  reviewed?: boolean
   reviewedAt?: number
-  actionTaken: boolean
+  actionTaken?: boolean
   notes?: string
 }
 
@@ -97,7 +93,7 @@ export default function ModerationPage() {
         (log) =>
           log.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
           log.result.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          log.result.explanation.toLowerCase().includes(searchQuery.toLowerCase()),
+          (log.result.explanation || "").toLowerCase().includes(searchQuery.toLowerCase()),
       )
     }
 
