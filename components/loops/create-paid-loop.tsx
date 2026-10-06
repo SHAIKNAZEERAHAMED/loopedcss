@@ -291,7 +291,7 @@ export function CreatePaidLoop() {
                     className="max-h-[150px] mx-auto rounded-md"
                   />
                   <p className="text-sm text-muted-foreground">
-                    {previewImageFile?.name} ({(previewImageFile?.size / 1024 / 1024).toFixed(2)} MB)
+                    {previewImageFile?.name} ({((previewImageFile?.size ?? 0) / 1024 / 1024).toFixed(2)} MB)
                   </p>
                 </div>
               ) : (
