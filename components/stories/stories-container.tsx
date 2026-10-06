@@ -76,8 +76,8 @@ export function StoriesContainer() {
           }
 
           storiesData.push({
-            id,
             ...story,
+            id,
           })
         }
 
