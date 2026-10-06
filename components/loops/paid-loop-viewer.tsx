@@ -58,7 +58,7 @@ export function PaidLoopViewer({ loop }: PaidLoopViewerProps) {
 
     const preventScreenCapture = () => {
       if (document.pictureInPictureEnabled) {
-        videoRef.current?.disablePictureInPicture()
+        videoRef.current && (videoRef.current.disablePictureInPicture = true)
       }
     }
 
