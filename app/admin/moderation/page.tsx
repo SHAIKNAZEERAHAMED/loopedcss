@@ -67,7 +67,7 @@ export default function ModerationPage() {
 
     const fetchLogs = async () => {
       try {
-        const moderationLogs = await getModerationLogs(100)
+        const moderationLogs = await getModerationLogs()
         setLogs(moderationLogs)
         setFilteredLogs(moderationLogs)
       } catch (error) {
