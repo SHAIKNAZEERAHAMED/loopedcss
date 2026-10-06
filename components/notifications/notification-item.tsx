@@ -30,7 +30,7 @@ export default function NotificationItem({ notification, onMarkAsRead }: Notific
         const user = await getUserProfile(notification.senderId)
         if (user) {
           setSenderName(user.displayName || "User")
-          setSenderPhoto(user.photoURL)
+          setSenderPhoto(user.photoURL ?? null)
         }
       }
     }
