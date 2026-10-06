@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { db } from "@/lib/firebase/config"
+import { firestoreDb } from "@/lib/firebase/config"
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore"
 import { Post } from "@/components/post/post"
 import { useAuth } from "@/contexts/auth-context"
@@ -22,7 +22,7 @@ export function ProfileSavedPosts() {
         // In a real app, you would query saved posts collection
         // This is a simplified version
         const savedPostsQuery = query(
-          collection(db, "savedPosts"),
+          collection(firestoreDb, "savedPosts"),
           where("userId", "==", user.uid),
           orderBy("savedAt", "desc"),
           limit(10),
