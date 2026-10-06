@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { updateUserProfile, getUserProfile } from "@/lib/user-service"
+import { updateUser, getUserProfile } from "@/lib/user-service"
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage"
 import { storage } from "@/lib/firebase/config"
 import { v4 as uuidv4 } from "uuid"
@@ -124,7 +124,7 @@ export default function UserSettings() {
         },
       }
 
-      await updateUserProfile(user.uid, updatedProfile)
+      await updateUser(user.uid, updatedProfile)
 
       toast({
         title: "Success",
