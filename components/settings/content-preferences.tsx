@@ -13,7 +13,7 @@ import {
 } from "@/lib/services/content-diversity-service"
 import { useAuth } from "@/contexts/auth-context"
 import { doc, getDoc, setDoc } from "firebase/firestore"
-import { db } from "@/lib/firebase/config"
+import { firestoreDb } from "@/lib/firebase/config"
 import { toast } from "@/components/ui/use-toast"
 import { CheckIcon } from "lucide-react"
 
@@ -32,7 +32,7 @@ export function ContentPreferences() {
   const loadUserPreferences = async () => {
     try {
       setLoading(true)
-      const userPrefsDoc = await getDoc(doc(db, "userPreferences", user!.uid))
+      const userPrefsDoc = await getDoc(doc(firestoreDb, "userPreferences", user!.uid))
 
       if (userPrefsDoc.exists()) {
         const data = userPrefsDoc.data()
@@ -53,7 +53,7 @@ export function ContentPreferences() {
     try {
       setSaving(true)
       await setDoc(
-        doc(db, "userPreferences", user.uid),
+        doc(firestoreDb, "userPreferences", user.uid),
         {
           diversitySettings: settings,
           updatedAt: new Date(),
