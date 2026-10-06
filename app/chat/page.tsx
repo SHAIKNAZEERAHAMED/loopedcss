@@ -25,7 +25,7 @@ export default function ChatPage() {
           <div className="flex-1 overflow-y-auto">
             <ChatList
               onSelectChat={(chatId) => setSelectedChatId(chatId)}
-              selectedChatId={selectedChatId || undefined}
+              
             />
           </div>
         </div>
