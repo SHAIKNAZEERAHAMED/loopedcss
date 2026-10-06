@@ -18,7 +18,7 @@ import {
   FileAudio,
   Loader2,
 } from "lucide-react"
-import { ref, onValue, get, update } from "firebase/database"
+import { ref, onValue, get, update, set } from "firebase/database"
 import { db } from "@/lib/firebase/config"
 import {
   type ModerationResult,
@@ -30,9 +30,13 @@ import { formatDistanceToNow } from "date-fns"
 
 interface ModerationQueueItem {
   moderationId: string
+  contentId: string
   userId: string
   timestamp: number
   contentUrl: string
+  videoUrl?: string
+  audioUrl?: string
+  text?: string
   thumbnailUrl?: string
   initialAssessment: string
   transcriptionNeeded?: boolean
@@ -197,7 +201,7 @@ export function AdvancedModerationDashboard() {
       })
 
       // Remove from queue
-      await update(ref(db, `moderation-queue/${contentType}/${contentId}`), null)
+      await set(ref(db, `moderation-queue/${contentType}/${contentId}`), null)
 
       // Update UI
       setRecentModeration((prev) =>
