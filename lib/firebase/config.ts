@@ -2,6 +2,7 @@ import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth } from "firebase/auth"
 import { getDatabase, ref, update } from "firebase/database"
 import { getStorage } from "firebase/storage"
+import { getFirestore } from "firebase/firestore"
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -20,6 +21,7 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp()
 // Initialize Firebase services
 const auth = getAuth(app)
 const db = getDatabase(app)
+const firestoreDb = getFirestore(app)
 const storage = getStorage(app)
 
 // Ensure search fields exist in the database
@@ -37,5 +39,5 @@ async function ensureSearchFields() {
   }
 }
 
-export { app, auth, db, storage, ensureSearchFields }
+export { app, auth, db, firestoreDb, storage, ensureSearchFields }
 
